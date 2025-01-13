@@ -64,4 +64,14 @@ with ThreadPoolExecutor(max_workers=5) as executor:
 with open('books_data.json', 'w', encoding='utf-8') as json_file:
     json.dump(books_data, json_file, ensure_ascii=False, indent=4)
 
-print("Data saved to books_data.json")
+html_content = '<html><head><title>Books Scraped</title></head><body><h1>Books List</h1><table border="1"><tr><th>Title</th><th>Price</th><th>Link</th></tr>'
+
+for book in books_data:
+    html_content += f'<tr><td>{book["title"]}</td><td>{book["price"]}</td><td><a href="{book["book_link"]}" target="_blank">View Book</a></td></tr>'
+
+html_content += '</table></body></html>'
+
+with open('books_data.html', 'w', encoding='utf-8') as html_file:
+    html_file.write(html_content)
+
+print("Data saved to books_data.json and books_data.html")

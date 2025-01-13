@@ -64,7 +64,57 @@ with ThreadPoolExecutor(max_workers=5) as executor:
 with open('books_data.json', 'w', encoding='utf-8') as json_file:
     json.dump(books_data, json_file, ensure_ascii=False, indent=4)
 
-html_content = '<html><head><title>Books Scraped</title></head><body><h1>Books List</h1><table border="1"><tr><th>Title</th><th>Price</th><th>Link</th></tr>'
+html_content = '''
+<html>
+<head>
+    <title>Books Scraped</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+            padding: 20px;
+            background-color: #333;
+            color: white;
+        }
+        table {
+            width: 80%;
+            margin: 20px auto;
+            border-collapse: collapse;
+            background-color: #fff;
+        }
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            background-color: #333;
+            color: white;
+        }
+        tr:hover {
+            background-color: #f1f1f1;
+        }
+        a {
+            color: #333;
+            text-decoration: none;
+            font-weight: bold;
+        }
+        a:hover {
+            color: #0066cc;
+        }
+    </style>
+</head>
+<body>
+    <h1>Books List</h1>
+    <table>
+        <tr><th>Title</th><th>Price</th><th>Link</th></tr>
+'''
 
 for book in books_data:
     html_content += f'<tr><td>{book["title"]}</td><td>{book["price"]}</td><td><a href="{book["book_link"]}" target="_blank">View Book</a></td></tr>'

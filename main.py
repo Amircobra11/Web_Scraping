@@ -1,31 +1,17 @@
-import os
-import sqlite3
-from concurrent.futures import ThreadPoolExecutor, as_completed
-from urllib.parse import urljoin
-
 import requests
 from bs4 import BeautifulSoup
+import os
+from urllib.parse import urljoin
+import json
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 base_url = 'https://books.toscrape.com/catalogue/page-{}.html'
 
 if not os.path.exists('images'):
     os.makedirs('images')
 
-conn = sqlite3.connect('books.db')
-c = conn.cursor()
+books_data = []
 
-c.execute('''
-    CREATE TABLE IF NOT EXISTS books (
-        title TEXT,
-        price TEXT,
-        image_url TEXT,
-        book_link TEXT
-    )
-''')
-conn.commit()
-
-
-# Function to download image
 def download_image(image_url, title):
     try:
         full_image_url = urljoin('https://books.toscrape.com', image_url)
@@ -36,7 +22,6 @@ def download_image(image_url, title):
         print(f"Image downloaded: {title}")
     except requests.exceptions.RequestException as e:
         print(f"Failed to download {title}: {e}")
-
 
 def get_books(page_num):
     url = base_url.format(page_num)
@@ -50,7 +35,6 @@ def get_books(page_num):
         print(f"Failed to retrieve page {page_num}: {e}")
         return []
 
-
 def process_books(books):
     for book in books:
         title = book.find('h3').find('a')['title']
@@ -60,16 +44,16 @@ def process_books(books):
 
         download_image(image_url, title)
 
-        c.execute('''
-            INSERT INTO books (title, price, image_url, book_link)
-            VALUES (?, ?, ?, ?)
-        ''', (title, price, image_url, book_link))
-        conn.commit()
-
+        books_data.append({
+            'title': title,
+            'price': price,
+            'image_url': image_url,
+            'book_link': book_link
+        })
 
 with ThreadPoolExecutor(max_workers=5) as executor:
     futures = []
-    for page_num in range(1, 6):
+    for page_num in range(1, 2):
         futures.append(executor.submit(get_books, page_num))
 
     for future in as_completed(futures):
@@ -77,4 +61,7 @@ with ThreadPoolExecutor(max_workers=5) as executor:
         if books:
             process_books(books)
 
-conn.close()
+with open('books_data.json', 'w', encoding='utf-8') as json_file:
+    json.dump(books_data, json_file, ensure_ascii=False, indent=4)
+
+print("Data saved to books_data.json")

@@ -1,15 +1,31 @@
+import os
+import sqlite3
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from urllib.parse import urljoin
+
 import requests
 from bs4 import BeautifulSoup
-import csv
-import os
-from urllib.parse import urljoin
-from concurrent.futures import ThreadPoolExecutor, as_completed
 
 base_url = 'https://books.toscrape.com/catalogue/page-{}.html'
 
 if not os.path.exists('images'):
     os.makedirs('images')
 
+conn = sqlite3.connect('books.db')
+c = conn.cursor()
+
+c.execute('''
+    CREATE TABLE IF NOT EXISTS books (
+        title TEXT,
+        price TEXT,
+        image_url TEXT,
+        book_link TEXT
+    )
+''')
+conn.commit()
+
+
+# Function to download image
 def download_image(image_url, title):
     try:
         full_image_url = urljoin('https://books.toscrape.com', image_url)
@@ -20,6 +36,7 @@ def download_image(image_url, title):
         print(f"Image downloaded: {title}")
     except requests.exceptions.RequestException as e:
         print(f"Failed to download {title}: {e}")
+
 
 def get_books(page_num):
     url = base_url.format(page_num)
@@ -33,7 +50,8 @@ def get_books(page_num):
         print(f"Failed to retrieve page {page_num}: {e}")
         return []
 
-def process_books(books, writer):
+
+def process_books(books):
     for book in books:
         title = book.find('h3').find('a')['title']
         price = book.find('p', class_='price_color').text
@@ -42,18 +60,21 @@ def process_books(books, writer):
 
         download_image(image_url, title)
 
-        writer.writerow([title, price, image_url, book_link])
+        c.execute('''
+            INSERT INTO books (title, price, image_url, book_link)
+            VALUES (?, ?, ?, ?)
+        ''', (title, price, image_url, book_link))
+        conn.commit()
 
-with open('books.csv', mode='w', newline='', encoding='utf-8') as file:
-    writer = csv.writer(file)
-    writer.writerow(['Title', 'Price', 'Image URL', 'Book Link'])
 
-    with ThreadPoolExecutor(max_workers=5) as executor:
-        futures = []
-        for page_num in range(1, 6):
-            futures.append(executor.submit(get_books, page_num))
+with ThreadPoolExecutor(max_workers=5) as executor:
+    futures = []
+    for page_num in range(1, 6):
+        futures.append(executor.submit(get_books, page_num))
 
-        for future in as_completed(futures):
-            books = future.result()
-            if books:
-                process_books(books, writer)
+    for future in as_completed(futures):
+        books = future.result()
+        if books:
+            process_books(books)
+
+conn.close()

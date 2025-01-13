@@ -2,29 +2,30 @@ import requests
 from bs4 import BeautifulSoup
 import csv
 
-# URL of the site
-url = 'https://books.toscrape.com/'
+base_url = 'https://books.toscrape.com/catalogue/page-{}.html'
 
-# Send request to the site
-response = requests.get(url)
+def get_books(page_num):
+    url = base_url.format(page_num)
+    response = requests.get(url)
 
-# Check if the request was successful
-if response.status_code == 200:
-    soup = BeautifulSoup(response.text, 'html.parser')
+    if response.status_code == 200:
+        soup = BeautifulSoup(response.text, 'html.parser')
+        books = soup.find_all('article', class_='product_pod')
+        return books
+    else:
+        print(f"Failed to retrieve page {page_num}.")
+        return []
 
-    # Find all books on the page
-    books = soup.find_all('article', class_='product_pod')
+with open('books.csv', mode='w', newline='', encoding='utf-8') as file:
+    writer = csv.writer(file)
+    writer.writerow(['Title', 'Price', 'Image URL'])
 
-    # Create CSV file and write data
-    with open('books.csv', mode='w', newline='', encoding='utf-8') as file:
-        writer = csv.writer(file)
-        writer.writerow(['Title', 'Price', 'Image URL'])
+    for page_num in range(1, 2):
+        print(f"Scraping page {page_num}...")
+        books = get_books(page_num)
 
-        # Loop through each book and extract details
         for book in books:
             title = book.find('h3').find('a')['title']
             price = book.find('p', class_='price_color').text
             image_url = book.find('img')['src']
             writer.writerow([title, price, image_url])
-else:
-    print("Failed to retrieve the webpage.")
